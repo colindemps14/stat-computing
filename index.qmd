@@ -1,0 +1,190 @@
+---
+title: "Times Higher Education World University Rankings"
+author: "Colin Dempsey"
+format: html
+editor: visual
+---
+
+```{r} 
+
+library(tidyverse)
+library(reactable)
+library(crosstalk)
+library(plotly)
+```
+
+# Problem 1A
+
+Read in data.
+
+```{r}
+
+times <- read_csv(
+  "https://manctsui.github.io/datasets/timesData.csv",
+  show_col_types = FALSE
+) |>
+  mutate(
+    rank = readr::parse_number(world_rank)
+  ) |>
+  group_by(country) |>
+  mutate(
+    Number_of_Universities = n()
+  ) |>
+  ungroup()
+
+head(times)
+names(times)
+```
+
+Find top three countries with the most universities.
+
+```{r }
+country_counts <- times |>
+  distinct(country, Number_of_Universities) |>
+  arrange(desc(Number_of_Universities)) |>
+  slice_head(n = 3)
+```
+
+Display as a reactable.
+
+```{r }
+reactable(
+  country_counts,
+  searchable = FALSE,
+  pagination = FALSE,
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE,
+  columns = list(
+    country = colDef(
+      name = "Country"
+    )
+  )
+)
+```
+
+# Problem 1B
+
+Display the results from Problem 1A as a bar chart.
+
+```{r }
+ggplot(
+  country_counts,
+  aes(
+    x = reorder(country, Number_of_Universities),
+    y = Number_of_Universities
+  )
+) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Three Countries with the Most Universities",
+    x = "Country",
+    y = "Number of Universities"
+  ) +
+  theme_minimal()
+```
+
+# Problem 2
+
+Display top 50 universities in 2011.
+
+```{r }
+top_50_2011 <- times |>
+  filter(year == 2011) |>
+  arrange(rank) |>
+  slice_head(n = 50) |>
+  select(
+    Rank = rank,
+    University_Name = university_name
+  )
+```
+
+```{r }
+reactable(
+  top_50_2011,
+  columns = list(
+    University_Name = colDef(
+      name = "University Name"
+    )
+  )
+)
+```
+
+# Problem 2B
+
+The rank column by itself would not be a good candidate for a SharedData key. The data set contains multiple years and thus the same rank appears in multiple years so rank alone cannot uniquely identify an observation. Rank and year is a better choice.
+
+add key column using mutate
+```{r}
+times <- times |>
+  mutate(
+    ranking_key = paste(year, rank, sep = "-")
+  )
+```
+
+# Problem 2C
+
+Create SharedData object.
+
+```{r }
+shared_times <- SharedData$new(
+  times,
+  key = ~ranking_key,
+  group = "university_rankings"
+)
+```
+
+Create a filter slider based on university rank.
+
+```{r }
+filter_slider(
+  id = "rank_filter",
+  label = "University Rank:",
+  sharedData = shared_times,
+  column = ~rank,
+  step = 1
+)
+```
+
+# Problem 3
+
+Restrict dataset 2016.
+
+```{r }
+times_2016 <- times |>
+  filter(year == 2016)
+```
+
+```{r }
+shared_2016 <- SharedData$new(
+  times_2016,
+  key = ~ranking_key,
+  group = "rankings_2016"
+)
+```
+
+## Number of Students vs. Student-Staff Ratio
+
+```{r }
+plot_ly(
+  data = shared_2016,
+  x = ~num_students,
+  y = ~student_staff_ratio,
+  type = "scatter",
+  mode = "markers"
+)
+```
+
+## Student-Staff Ratio vs. Teaching Score
+
+```{r }
+plot_ly(
+  data = shared_2016,
+  x = ~student_staff_ratio,
+  y = ~teaching,
+  type = "scatter",
+  mode = "markers"
+)
+```
+
