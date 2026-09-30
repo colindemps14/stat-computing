@@ -1,0 +1,142 @@
+---
+
+title: "Assignment on Theoretical Data Transformations"
+author: "Colin Dempsey"
+date: "r Sys.Date()"
+output: html_document
+---
+
+# Problem 1
+
+```{r }
+df <- data.frame(
+  x = c(5, 1, 4, NA, NA, NA, 2, 1),
+  y = c(5, NA, 3, 2, 5, NA, 2, 1),
+  z = c(1, 4, 2, 5, 2, NA, 5, 4),
+  t = c(4, 2, NA, 1, 5, 2, 3, 3)
+)
+
+df
+
+```
+
+Using collaborative filtering, User 2's predicted preference for Movie 6 is approximately **2**.
+
+# Problem 2
+
+```{r}
+correlations <- sapply(1:nrow(df), function(i) {
+  cor(df[1, ], df[i, ])
+})
+
+correlations
+```
+
+The movie with the highest Pearson correlation with Movie 1 is:
+
+```{r}
+which.max(correlations[-1]) + 1
+```
+
+Therefore, the most similar movie to Movie 1 is **Movie 7**.
+
+# Problem 3A
+
+```{r}
+countries <- read.csv(
+  "http://manctsui.github.io/datasets/countries.csv"
+)
+
+for (column in c("Agriculture", "Industry")) {
+  
+  regional_mean <- ave(
+    countries[[column]],
+    countries$Region,
+    FUN = function(x) mean(x, na.rm = TRUE)
+  )
+  
+  countries[[column]][is.na(countries[[column]])] <-
+    regional_mean[is.na(countries[[column]])]
+}
+
+countries
+```
+
+The missing values in `Agriculture` and `Industry` were replaced with the mean for the corresponding region.
+
+# Problem 3B
+
+```{r}
+countries_original <- read.csv(
+  "http://manctsui.github.io/datasets/countries.csv"
+)
+
+agriculture_na <- table(
+  countries_original$Region[
+    is.na(countries_original$Agriculture)
+  ]
+)
+
+industry_na <- table(
+  countries_original$Region[
+    is.na(countries_original$Industry)
+  ]
+)
+
+agriculture_na
+industry_na
+```
+
+The tables above give the number of missing values filled from each region for Agriculture and Industry.
+
+# Problem 4
+
+```{r}
+df2 <- data.frame(
+  temp = c(79, 74, 73, 76, 82, 72, 71, 79, 83, 70, 73, 75, 77),
+  chirps = c(44, 40, 38, 43, 48, 37, 34, 45, 51, 32, 35, 42, 43)
+)
+
+r <- cor(df2$temp, df2$chirps)
+mean_temp <- mean(df2$temp)
+mean_chirps <- mean(df2$chirps)
+sd_temp <- sd(df2$temp)
+sd_chirps <- sd(df2$chirps)
+
+b1 <- r * (sd_temp / sd_chirps)
+b0 <- mean_temp - b1 * mean_chirps
+
+r
+mean_temp
+mean_chirps
+sd_temp
+sd_chirps
+b1
+b0
+```
+
+For simple linear regression,
+
+$$
+b_1 = r\frac{s_y}{s_x}
+$$
+
+and
+
+$$
+b_0 = \bar{y} - b_1\bar{x}.
+$$
+
+Using the data provided, this gives approximately:
+
+$$
+\text{temp} = 0.793(\text{chirps}) + 42.565.
+$$
+
+This is the same regression equation obtained from:
+
+```{r}
+lm(temp ~ chirps, data = df2)
+```
+
+The equation stated in the assignment, `temp = 0.714(chirps) + 46.474`, does not match the data provided.
